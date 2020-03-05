@@ -10,12 +10,12 @@ class EmotionClassifier(nn.Module):
     def __init__(self):
         super(EmotionClassifier, self).__init__()
         self.convolutions = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1), nn.ReLU(),
+            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1), nn.ReLU(),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1), nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2), nn.Dropout(0.25),
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1), nn.ReLU(),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1,  padding=1), nn.ReLU(),
             nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1), nn.ReLU(),
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1), nn.ReLU(),
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1,  padding=1), nn.ReLU(),
             nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1), nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),  nn.Dropout(0.25),
             nn.Flatten()
@@ -24,9 +24,10 @@ class EmotionClassifier(nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(p=0.5)
         self.output_layer = nn.Linear(in_features=1024, out_features=7)
-        self.softmax = nn.Softmax()
+        self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
         x = self.convolutions(x)
         x = self.dropout(self.relu((self.fc1(x))))
-        return self.softmax(self.output_layer(x))
+        x = self.output_layer(x)
+        return self.softmax(x)

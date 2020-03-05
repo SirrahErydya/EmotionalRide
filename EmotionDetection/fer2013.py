@@ -34,6 +34,6 @@ class FER2013(Dataset):
             for row in reader:
                 image = np.fromstring(row['pixels'], dtype=np.float32, sep=' ').reshape((1, 48, 48))
                 if self.train:
-                    self.targets.append(int(row['emotion']))
+                    self.targets.append(np.int32(row['emotion']))
                 self.data.append(image)
 

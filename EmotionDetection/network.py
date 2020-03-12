@@ -27,6 +27,7 @@ class EmotionClassifier(nn.Module):
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
+        x = x.reshape(-1, 1, 48, 48)
         x = self.convolutions(x)
         x = self.dropout(self.relu((self.fc1(x))))
         x = self.output_layer(x)

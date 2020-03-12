@@ -111,22 +111,31 @@ class CombiDataset(Dataset):
         fer = FER2013(fer_root, transform=transform, reduce_emotions=reduce_emotions)
         ck = CKPlus(ck_root, transform=transform, reduce_emotions=reduce_emotions)
         fe = FacialExpression(fe_root, transform=transform, reduce_emotions=reduce_emotions)
-        self.data = fer.data + ck.data + fe.data
-        self.targets = fer.targets + ck.targets + fe.targets
-        if transform is not None:
+        if transform is None:
+            self.data = fer.data + ck.data + fe.data
+            self.targets = fer.targets + ck.targets + fe.targets
+        else:
+            self.data = []
+            self.targets = []
             max_length = np.max([len(fer.data), len(ck.data), len(fe.data)])
             for i in range(max_length):
                 if i < len(fer):
                     data, target = fer[i]
                     self.data.append(data)
+                    self.data.append(ToTensor()(fer.data[i]))
+                    self.targets.append(target)
                     self.targets.append(target)
                 if i < len(ck):
                     data, target = ck[i]
                     self.data.append(data)
+                    self.data.append(ToTensor()(ck.data[i]))
+                    self.targets.append(target)
                     self.targets.append(target)
                 if i < len(fe):
                     data, target = fe[i]
                     self.data.append(data)
+                    self.data.append(ToTensor()(fe.data[i]))
+                    self.targets.append(target)
                     self.targets.append(target)
         print("Combined dataset:")
         print("FER Samples:", len(fer.data))

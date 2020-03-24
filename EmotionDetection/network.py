@@ -7,7 +7,7 @@ import torch.nn as nn
 
 
 class EmotionClassifier(nn.Module):
-    def __init__(self):
+    def __init__(self, out_layers=7):
         super(EmotionClassifier, self).__init__()
         self.convolutions = nn.Sequential(
             nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1), nn.ReLU(),
@@ -23,7 +23,7 @@ class EmotionClassifier(nn.Module):
         self.fc1 = nn.Linear(in_features=20736, out_features=1024)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(p=0.5)
-        self.output_layer = nn.Linear(in_features=1024, out_features=7)
+        self.output_layer = nn.Linear(in_features=1024, out_features=out_layers)
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x):

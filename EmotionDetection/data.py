@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image
 
 LABELS = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+REDUCED_INDICES = {0:0, 3:1, 4:2, 5:3}
 
 
 class FerDataset(Dataset):
@@ -49,9 +50,10 @@ class FER2013(FerDataset):
                 if self.train:
                     emotion = np.int32(row['emotion'])
                     if self.reduce_emotions:
-                        if emotion > 0:
-                            emotion = emotion - 1
-                        assert emotion < 6
+                        try:
+                            emotion = REDUCED_INDICES[emotion]
+                        except KeyError:
+                            continue
                     self.targets.append(emotion)
                 self.data.append(image)
 
@@ -64,13 +66,17 @@ class CKPlus(FerDataset):
 
     def make_dataset(self):
         for i in range(len(self.emotions)):
-            self.get_data(i)
+            emotion = i
+            if self.reduce_emotions:
+                try:
+                    emotion = REDUCED_INDICES[i]
+                except KeyError:
+                    continue
+            self.get_data(emotion)
 
     def get_data(self, target):
         path = os.path.join(self.root, "CK+48")
         img_folder = os.path.join(path, self.emotions[target])
-        if self.reduce_emotions and target > 0:
-            target = target - 1
         for img_file in os.listdir(img_folder):
             if img_file.endswith('.png'):
                 pil_img = Image.open(os.path.join(img_folder, img_file))
@@ -82,10 +88,7 @@ class CKPlus(FerDataset):
 class FacialExpression(FerDataset):
     def __init__(self, root, transform=None, reduce_emotions=False):
         super(FacialExpression, self).__init__(root, transform=transform, reduce_emotions=reduce_emotions)
-        self.emo_map = {'anger': 0, 'disgust': 1, 'fear': 2, 'happiness': 3, 'sadness': 4, 'surprise': 5, 'neutral': 6}
-        if self.reduce_emotions:
-            self.emo_map = {'anger': 0, 'disgust': 0, 'fear': 1, 'happiness': 2, 'sadness': 3, 'surprise': 4,
-                            'neutral': 5}
+        self.emo_map = {'anger': 0, 'disgust': 1, 'fear': 2, 'happiness': 3, 'sadness': 4, 'surprise': 5, 'neutral': 6, "contempt":7}
         self.make_dataset()
 
     def make_dataset(self):
@@ -94,16 +97,18 @@ class FacialExpression(FerDataset):
         with open(legend_path) as file:
             reader = csv.DictReader(file, delimiter=',')
             for row in reader:
-                emotion = row['emotion'].lower()
-                try:
-                    self.targets.append(np.int32(self.emo_map[emotion]))
+                emotion = self.emo_map[row['emotion'].lower()]
+                if self.reduce_emotions:
+                    try:
+                        emotion = REDUCED_INDICES[emotion]
+                    except KeyError:
+                        continue
+                    self.targets.append(emotion)
                     pil_img = Image.open(os.path.join(img_path, row['image']))
                     pil_img = pil_img.resize((48,48), Image.BICUBIC)
                     pil_img = pil_img.convert('L')
                     img = np.array(pil_img, dtype=np.float32)
                     self.data.append(img)
-                except KeyError:
-                    print("Skipping unknown emotion:", emotion)
 
 
 class CombiDataset(Dataset):

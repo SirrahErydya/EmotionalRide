@@ -111,18 +111,51 @@ class FacialExpression(FerDataset):
                     self.data.append(img)
 
 
+class FERG(FerDataset):
+    def __init__(self, root, transform=None, reduce_emotions=False):
+        super(FERG, self).__init__(root, transform=transform, reduce_emotions=reduce_emotions)
+        self.characters = ['aia', 'bonnie', 'jules', 'malcolm', 'mery', 'ray']
+        self.emo_map = {'anger': 0, 'disgust': 1, 'fear': 2, 'joy': 3, 'sadness': 4, 'surprise': 5, 'neutral': 6}
+        self.make_dataset()
+
+    def make_dataset(self):
+        for character in self.characters:
+            char_path = os.path.join(self.root, character)
+            for emotion in self.emo_map.keys():
+                emo_idx = self.emo_map[emotion]
+                if self.reduce_emotions:
+                    try:
+                        emo_idx = REDUCED_INDICES[emo_idx]
+                    except KeyError:
+                        continue
+                folder = character + "_" + emotion
+                full_path = os.path.join(char_path, folder)
+                self.get_data(full_path, emo_idx)
+
+    def get_data(self, path, target):
+        for img_file in os.listdir(path):
+            if img_file.endswith('.png'):
+                pil_img = Image.open(os.path.join(path, img_file))
+                pil_img = pil_img.resize((48,48), Image.BICUBIC)
+                pil_img = pil_img.convert('L')
+                img = np.array(pil_img, dtype=np.float32)
+                self.data.append(img)
+                self.targets.append(np.int32(target))
+
+
 class CombiDataset(Dataset):
-    def __init__(self, fer_root, ck_root, fe_root, transform=None, reduce_emotions=False):
+    def __init__(self, fer_root, ck_root, fe_root, ferg_root, transform=None, reduce_emotions=False):
         fer = FER2013(fer_root, transform=transform, reduce_emotions=reduce_emotions)
         ck = CKPlus(ck_root, transform=transform, reduce_emotions=reduce_emotions)
         fe = FacialExpression(fe_root, transform=transform, reduce_emotions=reduce_emotions)
+        #ferg = FERG(ferg_root, transform=transform, reduce_emotions=reduce_emotions)
         if transform is None:
-            self.data = fer.data + ck.data + fe.data
-            self.targets = fer.targets + ck.targets + fe.targets
+            self.data = fer.data + ck.data + fe.data #+ ferg.data
+            self.targets = fer.targets + ck.targets + fe.targets #+ ferg.targets
         else:
             self.data = []
             self.targets = []
-            max_length = np.max([len(fer.data), len(ck.data), len(fe.data)])
+            max_length = np.max([len(fer.data), len(ck.data), len(fe.data), len(ferg.data)])
             for i in range(max_length):
                 if i < len(fer):
                     data, target = fer[i]
@@ -142,10 +175,17 @@ class CombiDataset(Dataset):
                     self.data.append(ToTensor()(fe.data[i]))
                     self.targets.append(target)
                     self.targets.append(target)
+                if i < len(ferg):
+                    data, target = ferg[i]
+                    self.data.append(data)
+                    self.data.append(ToTensor()(fe.data[i]))
+                    self.targets.append(target)
+                    self.targets.append(target)
         print("Combined dataset:")
         print("FER Samples:", len(fer.data))
         print("CKPlus samples:", len(ck.data))
         print("Facial expression samples:", len(fe.data))
+        #print("FERG samples:", len(ferg.data))
 
     def __getitem__(self, item):
         img = self.data[item]
